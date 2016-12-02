@@ -63,6 +63,19 @@ class MysqliConnection implements Connection, PingableConnection, ServerInfoAwar
 
         $this->_conn = mysqli_init();
 
+        if (isset($driverOptions['ssl_key']) &&
+            isset($driverOptions['ssl_cert']) &&
+            isset($driverOptions['ssl_ca'])
+        ) {
+            $this->_conn->ssl_set(
+                $driverOptions['ssl_key'],
+                $driverOptions['ssl_cert'],
+                $driverOptions['ssl_ca'],
+                isset($driverOptions['ssl_capath']) ? $driverOptions['ssl_capath'] : null,
+                isset($driverOptions['ssl_cipher']) ? $driverOptions['ssl_cipher'] : null
+            );
+        }
+        
         $this->setDriverOptions($driverOptions);
 
         set_error_handler(function () {});
@@ -229,7 +242,7 @@ class MysqliConnection implements Connection, PingableConnection, ServerInfoAwar
 
         foreach ($driverOptions as $option => $value) {
 
-            if ($option === static::OPTION_FLAGS) {
+            if ($option === static::OPTION_FLAGS || (preg_match('/^(ssl_)+(key|cert|ca|capath|cipher)$/', $option))) {
                 continue;
             }
 
