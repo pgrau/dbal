@@ -63,19 +63,7 @@ class MysqliConnection implements Connection, PingableConnection, ServerInfoAwar
 
         $this->_conn = mysqli_init();
 
-        if (isset($driverOptions['ssl_key']) &&
-            isset($driverOptions['ssl_cert']) &&
-            isset($driverOptions['ssl_ca'])
-        ) {
-            $this->_conn->ssl_set(
-                $driverOptions['ssl_key'],
-                $driverOptions['ssl_cert'],
-                $driverOptions['ssl_ca'],
-                isset($driverOptions['ssl_capath']) ? $driverOptions['ssl_capath'] : null,
-                isset($driverOptions['ssl_cipher']) ? $driverOptions['ssl_cipher'] : null
-            );
-        }
-        
+        $this->setSecureConnection($params);
         $this->setDriverOptions($driverOptions);
 
         set_error_handler(function () {});
@@ -242,7 +230,7 @@ class MysqliConnection implements Connection, PingableConnection, ServerInfoAwar
 
         foreach ($driverOptions as $option => $value) {
 
-            if ($option === static::OPTION_FLAGS || (preg_match('/^(ssl_)+(key|cert|ca|capath|cipher)$/', $option))) {
+            if ($option === static::OPTION_FLAGS ) {
                 continue;
             }
 
@@ -275,5 +263,29 @@ class MysqliConnection implements Connection, PingableConnection, ServerInfoAwar
     public function ping()
     {
         return $this->_conn->ping();
+    }
+
+    /**
+     * Stablish a secure connection if exist ssl_cert and ssl_key
+     *
+     * @param array $params
+     * @throws MysqliException
+     */
+    private function setSecureConnection(array $params)
+    {
+        if (isset($params['ssl_key']) && isset($params['ssl_cert'])) {
+            $this->_conn->ssl_set(
+                $params['ssl_key'],
+                $params['ssl_cert'],
+                isset($params['ssl_ca'])     ? $params['ssl_ca']     : null,
+                isset($params['ssl_capath']) ? $params['ssl_capath'] : null,
+                isset($params['ssl_cipher']) ? $params['ssl_cipher'] : null
+            );
+        } elseif (
+            (isset($params['ssl_key']) && ! isset($params['ssl_cert']))
+            || ( ! isset($params['ssl_key']) && isset($params['ssl_cert']))
+        ) {
+            throw new MysqliException('ssl_key and ssl_cert are mandatory for secure connections');
+        }
     }
 }

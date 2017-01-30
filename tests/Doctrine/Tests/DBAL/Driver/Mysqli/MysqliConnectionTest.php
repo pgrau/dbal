@@ -2,6 +2,8 @@
 
 namespace Doctrine\Tests\DBAL\Driver\Mysqli;
 
+use Doctrine\DBAL\Driver\Mysqli\MysqliConnection;
+use Doctrine\DBAL\Driver\Mysqli\MysqliException;
 use Doctrine\Tests\DbalTestCase;
 
 class MysqliConnectionTest extends DbalTestCase
@@ -15,13 +17,13 @@ class MysqliConnectionTest extends DbalTestCase
 
     protected function setUp()
     {
-        if ( ! extension_loaded('mysqli')) {
+        if (!extension_loaded('mysqli')) {
             $this->markTestSkipped('mysqli is not installed.');
         }
 
         parent::setUp();
 
-        $this->connectionMock = $this->getMockBuilder('Doctrine\DBAL\Driver\Mysqli\MysqliConnection')
+        $this->connectionMock = $this->getMockBuilder(MysqliConnection::class)
             ->disableOriginalConstructor()
             ->getMockForAbstractClass();
     }
@@ -30,4 +32,28 @@ class MysqliConnectionTest extends DbalTestCase
     {
         $this->assertFalse($this->connectionMock->requiresQueryForServerVersion());
     }
+
+    /**
+     * @dataProvider secureParamsContainErrorsProvider
+     */
+    public function testItShouldReturnAnExceptionWhenMissingMandatorySecureParams(array $secureParams)
+    {
+        $this->expectException(MysqliException::class);
+        $this->expectExceptionMessage('ssl_key and ssl_cert are mandatory for secure connections');
+
+        new MysqliConnection($secureParams, 'xxx', 'xxx');
+    }
+
+    public function secureParamsContainErrorsProvider()
+    {
+        return [
+            [
+                ['ssl_cert' => 'cert.pem']
+            ],
+            [
+                ['ssl_key' => 'key.pem']
+            ]
+        ];
+    }
 }
+
